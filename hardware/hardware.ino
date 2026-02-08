@@ -9,6 +9,8 @@
 #include <ctype.h>
 
 // ADD YOUR IMPORTS HERE
+#include <DHT.h>
+#include <FastLED.h>
 
 
 
@@ -38,19 +40,24 @@
 #define ARDUINOJSON_USE_DOUBLE      1 
 
 // DEFINE THE CONTROL PINS FOR THE DHT22 
-
+#define DHTPIN 32
+#define DHTTYPE DHT22
+#define LED_PIN 33
+#define NUM_LEDS 7 // Number of LEDs
+#define LED_TYPE WS2812
+#define COLOR_ORDER GRB
 
 
 
 // MQTT CLIENT CONFIG  
-static const char* pubtopic      = "620012345";                    // Add your ID number here
-static const char* subtopic[]    = {"620012345_sub","/elet2415"};  // Array of Topics(Strings) to subscribe to
-static const char* mqtt_server   = "local";         // Broker IP address or Domain name as a String 
+static const char* pubtopic      = "620172489";                    // Add your ID number here
+static const char* subtopic[]    = {"620172489_sub","/elet2415"};  // Array of Topics(Strings) to subscribe to
+static const char* mqtt_server   = "www.yanacreations.com";         // Broker IP address or Domain name as a String 
 static uint16_t mqtt_port        = 1883;
 
 // WIFI CREDENTIALS
-const char* ssid       = "YOUR_SSID";     // Add your Wi-Fi ssid
-const char* password   = "YOUR_PASSWORD"; // Add your Wi-Fi password 
+const char* ssid       = "MonaConnect";     // Add your Wi-Fi ssid
+const char* password   = ""; // Add your Wi-Fi password 
 
 
 
@@ -81,7 +88,8 @@ double calcHeatIndex(double Temp, double Humid);
 
 
 /* Init class Instances for the DHT22 etcc */
- 
+DHT dht(DHTPIN, DHTTYPE);
+CRGB leds[NUM_LEDS];
   
 
 //############### IMPORT HEADER FILES ##################
@@ -102,6 +110,17 @@ void setup() {
   // INITIALIZE ALL SENSORS AND DEVICES
   
   /* Add all other necessary sensor Initializations and Configurations here */
+  //DHT22 Stuff
+  dht.begin();
+  Serial.println("DHT22 Online"); //Debug statement
+
+  //WS2812 Stuff
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
+  FastLED.setBrightness(255);  
+  FastLED.clear();
+  FastLED.show();
+  Serial.println("FastLED Online");
+
 
 
   initialize();     // INIT WIFI, MQTT & NTP 
@@ -142,25 +161,29 @@ void vUpdate( void * pvParameters )  {
           // #######################################################
    
           // 1. Read Humidity and save in variable below
-          double h = 0;
+          double h = dht.readHumidity();
            
           // 2. Read temperature as Celsius   and save in variable below
-          double t = 0;    
+          double t = dht.readTemperature();    
  
 
-          if(isNumber(t)){
+          if(isNumber(t) && isNumber(h)){
               // ##Publish update according to ‘{"id": "student_id", "timestamp": 1702212234, "temperature": 30, "humidity":90, "heatindex": 30}’
 
               // 1. Create JSon object
-              
+              JsonDocument doc;
               // 2. Create message buffer/array to store serialized JSON object
-              
+              char message[256];
               // 3. Add key:value pairs to JSon object based on above schema
-
+              doc["id"] = "620172489";
+              doc["timestamp"] = getTimeStamp();
+              doc["temperature"] = t;
+              doc["humidity"] = h;
+              doc["heatindex"] = calcHeatIndex(t,h);
               // 4. Seralize / Covert JSon object to JSon string and store in message array
-               
+              serializeJson(doc, message); 
               // 5. Publish message to a topic sobscribed to by both backend and frontend                
-
+              publish(pubtopic, message);
           }
 
           
@@ -210,10 +233,29 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   if (strcmp(type, "controls") == 0){
     // 1. EXTRACT ALL PARAMETERS: NODES, RED,GREEN, BLUE, AND BRIGHTNESS FROM JSON OBJECT
+    int numLeds = doc["leds"];
+    int brightness = doc["brightness"];
+    int red = doc["colour"]["r"];
+    int green = doc["colour"]["g"];
+    int blue = doc["colour"]["b"];
 
+    if(numLeds > NUM_LEDS) numLeds = NUM_LEDS; //Ensuring Led number cant go above 7
+    if(numLeds<0) numLeds = 0; // //Ensuring Led number cant go below 0
+
+    FastLED.setBrightness(brightness);
+    Serial.printf("Setting %d LEDS to RGB(%d, %d, %d) with brightness %d\n", numLeds, red, green, blue, brightness); //Debug statement
     // 2. ITERATIVELY, TURN ON LED(s) BASED ON THE VALUE OF NODES. Ex IF NODES = 2, TURN ON 2 LED(s)
-
+    for(int i = 0; i<numLeds; i++){
+      leds[i] = CRGB(red, green, blue);
+      FastLED.show();
+      vTaskDelay(50/ portTICK_PERIOD_MS);
+    }
     // 3. ITERATIVELY, TURN OFF ALL REMAINING LED(s).
+    for(int i = numLeds; i<NUM_LEDS; i++){
+      leds[i] = CRGB::Black;
+      FastLED.show();
+      vTaskDelay(50/ portTICK_PERIOD_MS);
+    }
    
   }
 }
@@ -240,15 +282,40 @@ bool publish(const char *topic, const char *payload){
 
 double convert_Celsius_to_fahrenheit(double c){    
     // CONVERTS INPUT FROM °C TO °F. RETURN RESULTS     
+    return (c * 9.0/5.0) +32.0;
 }
 
 double convert_fahrenheit_to_Celsius(double f){    
-    // CONVERTS INPUT FROM °F TO °C. RETURN RESULT    
+    // CONVERTS INPUT FROM °F TO °C. RETURN RESULT  
+    return(f-32.0) * 5.0/9.0;  
 }
 
 double calcHeatIndex(double Temp, double Humid){
     // CALCULATE AND RETURN HEAT INDEX USING EQUATION FOUND AT https://byjus.com/heat-index-formula/#:~:text=The%20heat%20index%20formula%20is,an%20implied%20humidity%20of%2020%25
-  
+    double T = convert_Celsius_to_fahrenheit(Temp);
+    double RH = Humid;
+    
+    // Steadman's Heat Index Formula
+    // HI = c1 + c2*T + c3*RH + c4*T*RH + c5*T² + c6*RH² + c7*T²*RH + c8*T*RH² + c9*T²*RH²
+    
+    double c1 = -42.379;
+    double c2 = 2.04901523;
+    double c3 = 10.14333127;
+    double c4 = -0.22475541;
+    double c5 = -0.00683783;
+    double c6 = -0.05481717;
+    double c7 = 0.00122874;
+    double c8 = 0.00085282;
+    double c9 = -0.00000199;
+    
+    double HI = c1 + (c2 * T) + (c3 * RH) + (c4 * T * RH) + 
+                (c5 * T * T) + (c6 * RH * RH) + (c7 * T * T * RH) + 
+                (c8 * T * RH * RH) + (c9 * T * T * RH * RH);
+    
+    // Convert heat index back to Celsius
+    double HI_Celsius = convert_fahrenheit_to_Celsius(HI);
+    
+    return HI_Celsius;
 }
  
 

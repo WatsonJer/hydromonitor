@@ -35,6 +35,7 @@ class MQTT:
 
         # 3. REGISTER CALLBACK FUNCTION(S) FOR EACH TOPIC USING THE self.client.message_callback_add("topic",self.function) FUNCTION
         # WHICH TAKES A TOPIC AND THE NAME OF THE CALLBACK FUNCTION YOU HAVE CREATED FOR THIS SPECIFIC TOPIC
+        self.client.message_callback_add("620172489", self.update)
 
          
 
@@ -62,8 +63,7 @@ class MQTT:
     def publish(self,topic,payload):
         try :
             info = self.client.publish(topic, payload)
-            info.wait_for_publish()
-            return info.is_published()
+            return info.rc == 0
         
         except Exception as e:
             print(f"MQTT: Publish failed {str(e)}")
@@ -81,7 +81,17 @@ class MQTT:
             print("MQTT: Unexpected Disconnection.")
    
 
-    # 2. DEFINE CALLBACK FUNCTIONS(S) BELOW FOR EACH TOPIC(S) THE BACKEND SUBSCRIBES TO 
+    # 2. DEFINE CALLBACK FUNCTIONS(S) BELOW FOR EACH TOPIC(S) THE BACKEND SUBSCRIBES TO
+    def update(self, client, userdata, msg):
+        try:
+            payload = msg.payload.decode("utf-8")
+            print(payload)
+            update = loads(payload)
+            self.mongo.addUpdate(update)
+        except Exception as e:
+            print(f"MQTT: Update Error: {str(e)}")
+
+
      
 
 
