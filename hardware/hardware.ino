@@ -44,8 +44,7 @@
 #define DHTTYPE DHT22
 #define LED_PIN 33
 #define NUM_LEDS 7 // Number of LEDs
-#define LED_TYPE WS2812
-#define COLOR_ORDER GRB
+
 
 
 
@@ -56,8 +55,8 @@ static const char* mqtt_server   = "www.yanacreations.com";         // Broker IP
 static uint16_t mqtt_port        = 1883;
 
 // WIFI CREDENTIALS
-const char* ssid       = "MonaConnect";     // Add your Wi-Fi ssid
-const char* password   = ""; // Add your Wi-Fi password 
+const char* ssid       = "CWC-1528429";     // Add your Wi-Fi ssid
+const char* password   = "w2jbMwtJdrvc"; // Add your Wi-Fi password 
 
 
 
@@ -115,8 +114,8 @@ void setup() {
   Serial.println("DHT22 Online"); //Debug statement
 
   //WS2812 Stuff
-  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS);
-  FastLED.setBrightness(255);  
+  FastLED.addLeds<NEOPIXEL, LED_PIN>(leds, NUM_LEDS);
+  FastLED.setBrightness(250);  
   FastLED.clear();
   FastLED.show();
   Serial.println("FastLED Online");
@@ -183,7 +182,9 @@ void vUpdate( void * pvParameters )  {
               // 4. Seralize / Covert JSon object to JSon string and store in message array
               serializeJson(doc, message); 
               // 5. Publish message to a topic sobscribed to by both backend and frontend                
-              publish(pubtopic, message);
+              if(mqtt.connected() ){
+                publish(pubtopic, message);
+              }
           }
 
           
@@ -235,24 +236,24 @@ void callback(char* topic, byte* payload, unsigned int length) {
     // 1. EXTRACT ALL PARAMETERS: NODES, RED,GREEN, BLUE, AND BRIGHTNESS FROM JSON OBJECT
     int numLeds = doc["leds"];
     int brightness = doc["brightness"];
-    int red = doc["colour"]["r"];
-    int green = doc["colour"]["g"];
-    int blue = doc["colour"]["b"];
+    int red = doc["color"]["r"];
+    int green = doc["color"]["g"];
+    int blue = doc["color"]["b"];
+    int alpha = doc["color"]["a"];
 
-    if(numLeds > NUM_LEDS) numLeds = NUM_LEDS; //Ensuring Led number cant go above 7
-    if(numLeds<0) numLeds = 0; // //Ensuring Led number cant go below 0
 
-    FastLED.setBrightness(brightness);
-    Serial.printf("Setting %d LEDS to RGB(%d, %d, %d) with brightness %d\n", numLeds, red, green, blue, brightness); //Debug statement
+    Serial.printf("Setting %d LEDS to RGBA(%d, %d, %d, %d) with brightness %d\n", numLeds, red, green, blue, alpha, brightness); //Debug statement
     // 2. ITERATIVELY, TURN ON LED(s) BASED ON THE VALUE OF NODES. Ex IF NODES = 2, TURN ON 2 LED(s)
     for(int i = 0; i<numLeds; i++){
       leds[i] = CRGB(red, green, blue);
+      FastLED.setBrightness(brightness);
       FastLED.show();
       vTaskDelay(50/ portTICK_PERIOD_MS);
     }
     // 3. ITERATIVELY, TURN OFF ALL REMAINING LED(s).
     for(int i = numLeds; i<NUM_LEDS; i++){
       leds[i] = CRGB::Black;
+      FastLED.setBrightness(brightness);
       FastLED.show();
       vTaskDelay(50/ portTICK_PERIOD_MS);
     }

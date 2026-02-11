@@ -84,6 +84,7 @@ class MQTT:
     # 2. DEFINE CALLBACK FUNCTIONS(S) BELOW FOR EACH TOPIC(S) THE BACKEND SUBSCRIBES TO
     def update(self, client, userdata, msg):
         try:
+            topic = msg.topic
             payload = msg.payload.decode("utf-8")
             print(payload)
             update = loads(payload)
