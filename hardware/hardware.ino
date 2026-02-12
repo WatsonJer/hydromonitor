@@ -55,8 +55,8 @@ static const char* mqtt_server   = "www.yanacreations.com";         // Broker IP
 static uint16_t mqtt_port        = 1883;
 
 // WIFI CREDENTIALS
-const char* ssid       = "MonaConnect";     // Add your Wi-Fi ssid
-const char* password   = ""; // Add your Wi-Fi password 
+const char* ssid       = "Galaxy S21+ 5G 33b8";     // Add your Wi-Fi ssid
+const char* password   = "kqpr6093"; // Add your Wi-Fi password 
 
 
 
@@ -114,10 +114,21 @@ void setup() {
   Serial.println("DHT22 Online"); //Debug statement
 
   //WS2812 Stuff
-  FastLED.addLeds<NEOPIXEL, LED_PIN>(leds, NUM_LEDS);
-  FastLED.setBrightness(250);  
-  FastLED.clear();
-  FastLED.show();
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+  for(int x=0; x<7; x++){
+      leds[x] = CRGB( 240, 0, 240); // R, G, B range for each value is 0 to 255
+      FastLED.setBrightness( 200 ); // Ranges from 0 to 255
+      FastLED.show(); // Send changes to LED array
+      vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
+
+    // 3. ITERATIVELY, TURN OFF ALL REMAINING LED(s).
+  for(int x=0; x<NUM_LEDS; x++){
+    leds[x] = CRGB::Black;
+    FastLED.setBrightness( 200 );
+    FastLED.show();
+    vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
   Serial.println("FastLED Online");
 
 
@@ -236,28 +247,31 @@ void callback(char* topic, byte* payload, unsigned int length) {
     // 1. EXTRACT ALL PARAMETERS: NODES, RED,GREEN, BLUE, AND BRIGHTNESS FROM JSON OBJECT
     int numLeds = doc["leds"];
     int brightness = doc["brightness"];
+    
+    // Get RGB values directly WITHOUT alpha scaling
     int red = doc["color"]["r"];
     int green = doc["color"]["g"];
     int blue = doc["color"]["b"];
-    int alpha = doc["color"]["a"];
+    // Don't use alpha for brightness
 
-
-    Serial.printf("Setting %d LEDS to RGBA(%d, %d, %d, %d) with brightness %d\n", numLeds, red, green, blue, alpha, brightness); //Debug statement
-    // 2. ITERATIVELY, TURN ON LED(s) BASED ON THE VALUE OF NODES. Ex IF NODES = 2, TURN ON 2 LED(s)
-    for(int i = 0; i<numLeds; i++){
+    Serial.printf("Setting %d LEDS to RGB(%d, %d, %d) with brightness %d\n", 
+          numLeds, red, green, blue, brightness);
+    
+    // Set brightness ONCE
+    FastLED.setBrightness(brightness);
+    
+    // Turn ON the required LEDs
+    for(int i = 0; i < numLeds; i++){
       leds[i] = CRGB(red, green, blue);
-      FastLED.setBrightness(brightness);
-      FastLED.show();
-      vTaskDelay(50/ portTICK_PERIOD_MS);
     }
-    // 3. ITERATIVELY, TURN OFF ALL REMAINING LED(s).
-    for(int i = numLeds; i<NUM_LEDS; i++){
+    
+    // Turn OFF remaining LEDs
+    for(int i = numLeds; i < NUM_LEDS; i++){
       leds[i] = CRGB::Black;
-      FastLED.setBrightness(brightness);
-      FastLED.show();
-      vTaskDelay(50/ portTICK_PERIOD_MS);
     }
-   
+    
+    // Update display ONCE after all changes
+    FastLED.show();
   }
 }
 
