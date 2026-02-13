@@ -9,9 +9,15 @@ const routes = [
     meta: { transition: "fade" },
   },
   {
-    path: "/",
+    path: "/control",
     name: "Control",
     component: () => import("@/views/Control.vue"),
+    meta: { transition: "fade" },
+  },
+  {
+    path: "/live",
+    name: "Live",
+    component: () => import("@/views/Live.vue"),
     meta: { transition: "fade" },
   },
   // ADD NEW ROUTES HERE

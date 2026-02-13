@@ -86,7 +86,7 @@ class MQTT:
         try:
             topic = msg.topic
             payload = msg.payload.decode("utf-8")
-            print(payload)
+            #print(payload)
             update = loads(payload)
             self.mongo.addUpdate(update)
         except Exception as e:

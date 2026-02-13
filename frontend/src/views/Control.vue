@@ -119,7 +119,14 @@
 <script setup>
 import { useMqttStore } from "@/store/mqttStore";
 import { storeToRefs } from "pinia";
-import { reactive, watch, computed, onMounted, onBeforeUnmount } from "vue";
+import {
+  ref,
+  reactive,
+  watch,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+} from "vue";
 
 //Variables
 const Mqtt = useMqttStore();
