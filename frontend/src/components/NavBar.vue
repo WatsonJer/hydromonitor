@@ -35,6 +35,16 @@
               >Live</VBtn
             >
           </RouterLink>
+
+          <RouterLink class="route" :to="{ name: 'Analysis' }">
+            <VBtn
+              class="text-subtitle-2"
+              density="compact"
+              color="primary"
+              :variant="route.name == 'Analysis' ? 'tonal' : 'text'"
+              >Analysis</VBtn
+            >
+          </RouterLink>
         </VCol>
         <VCol cols="1" align="right">
           <VBtn

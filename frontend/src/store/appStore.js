@@ -110,14 +110,14 @@ export const useAppStore = defineStore(
       return [];
     };
 
-    const getFreqDistro = async (start, end) => {
+    const getFreqDistro = async (variable, start, end) => {
       // FETCH REQUEST WILL TIMEOUT AFTER 20 SECONDS
       const controller = new AbortController();
       const signal = controller.signal;
       const id = setTimeout(() => {
         controller.abort();
       }, 60000);
-      const URL = `/api/frequency/${start}/${end}`;
+      const URL = `/api/frequency/${variable}/${start}/${end}`;
       try {
         const response = await fetch(URL, { method: "GET", signal: signal });
         if (response.ok) {

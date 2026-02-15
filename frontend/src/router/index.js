@@ -20,6 +20,12 @@ const routes = [
     component: () => import("@/views/Live.vue"),
     meta: { transition: "fade" },
   },
+  {
+    path: "/analysis",
+    name: "Analysis",
+    component: () => import("@/views/Analysis.vue"),
+    meta: { transition: "fade" },
+  },
   // ADD NEW ROUTES HERE
 ];
 

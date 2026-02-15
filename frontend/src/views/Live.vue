@@ -134,6 +134,7 @@ const CreateCharts = async () => {
         data: [],
         turboThreshold: 0,
         color: "#FF9999",
+        lineWidth: 2,
       },
       {
         name: "Heat Index",
